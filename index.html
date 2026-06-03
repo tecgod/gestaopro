@@ -822,9 +822,6 @@ tbody td:first-child{color:var(--text);font-weight:500}
       <span class="nav-icon">🎰</span>Sorteios
     </div>
 
-    <div class="nav-item" data-page="excluidos" onclick="showPage('excluidos')">
-      <span class="nav-icon">🗑️</span>Lixeira<span class="notif-dot" id="badge-excluidos" style="display:none">0</span>
-    </div>
     <div class="nav-item" data-page="configuracoes" onclick="showPage('configuracoes')">
       <span class="nav-icon">⚙️</span>Config
     </div>
@@ -1657,9 +1654,10 @@ tbody td:first-child{color:var(--text);font-weight:500}
   z-index:9999;white-space:nowrap;pointer-events:none;
 "></div>
 
+<!-- badge-excluidos oculto (usado internamente pelo sistema) -->
+<span id="badge-excluidos" style="display:none"></span>
+
 <script>
-// ════════════════════════════════════════
-//           ESTADO GLOBAL
 // ════════════════════════════════════════
 const DB = {
   clientes: [], servidores: [], dispositivos: [],
