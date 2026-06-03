@@ -961,6 +961,7 @@ tbody td:first-child{color:var(--text);font-weight:500}
 
       <div class="search-bar">
         <select id="filter-venc-periodo" class="field" style="width:auto;padding:10px 12px" onchange="renderVencimentos()">
+          <option value="hoje">Vence Hoje</option>
           <option value="7">Próximos 7 dias</option>
           <option value="15">Próximos 15 dias</option>
           <option value="30">Próximos 30 dias</option>
@@ -2580,7 +2581,7 @@ function renderDashboard(){
   const vencHoje = DB.clientes.filter(c=>diasAteVencer(c.vencimento)===0);
   const vencAmanha = DB.clientes.filter(c=>diasAteVencer(c.vencimento)===1);
   if(vencidos>0) alerts+=`<div class="alert-banner alert-danger" style="cursor:pointer" onclick="irParaVencidos()">⛔ <strong>${vencidos}</strong> cliente(s) com assinatura vencida! <button class="btn btn-danger btn-sm" style="margin-left:auto" onclick="event.stopPropagation();irParaVencidos()">Ver</button></div>`;
-  if(vencHoje.length>0) alerts+=`<div class="alert-banner alert-warning" style="cursor:pointer" onclick="irParaVencidos()">⚠️ <strong>${vencHoje.length}</strong> cliente(s) vence hoje! <button class="btn btn-sm" style="margin-left:auto;background:var(--yellow);color:#000" onclick="event.stopPropagation();irParaVencidos()">Ver</button></div>`;
+  if(vencHoje.length>0) alerts+=`<div class="alert-banner alert-warning" style="cursor:pointer" onclick="irParaVenceHoje()">⚠️ <strong>${vencHoje.length}</strong> cliente(s) vence hoje! <button class="btn btn-sm" style="margin-left:auto;background:var(--yellow);color:#000" onclick="event.stopPropagation();irParaVenceHoje()">Ver</button></div>`;
   if(vencAmanha.length>0) alerts+=`<div class="alert-banner alert-info" style="cursor:pointer" onclick="irParaVencimentos7()">📅 <strong>${vencAmanha.length}</strong> cliente(s) vence amanhã. <button class="btn btn-sm" style="margin-left:auto;background:var(--accent);color:#fff" onclick="event.stopPropagation();irParaVencimentos7()">Ver</button></div>`;
   if(aniv>0) alerts+=`<div class="alert-banner alert-success" style="cursor:pointer" onclick="irParaAniversariantes()">🎂 <strong>${aniv}</strong> aniversariante(s) este mês! <button class="btn btn-sm" style="margin-left:auto;background:var(--green);color:#fff" onclick="event.stopPropagation();irParaAniversariantes()">Ver</button></div>`;
   alertsEl.innerHTML=alerts;
@@ -2635,6 +2636,13 @@ function renderDashboard(){
 // ════════════════════════════════════════
 //       NAVEGAÇÃO RÁPIDA DO DASHBOARD
 // ════════════════════════════════════════
+function irParaVenceHoje(){
+  showPage('vencimentos');
+  setTimeout(()=>{
+    const sel = document.getElementById('filter-venc-periodo');
+    if(sel){ sel.value='hoje'; renderVencimentos(); }
+  }, 50);
+}
 function irParaVencidos(){
   showPage('vencimentos');
   setTimeout(()=>{
@@ -3258,9 +3266,12 @@ function renderExcluidos(){
 //              VENCIMENTOS
 // ════════════════════════════════════════
 function renderVencimentos(){
-  const periodo = parseInt(document.getElementById('filter-venc-periodo')?.value||'7');
+  const periodoVal = document.getElementById('filter-venc-periodo')?.value || '7';
+  const periodo = parseInt(periodoVal);
   let list;
-  if(periodo===0){
+  if(periodoVal === 'hoje'){
+    list = DB.clientes.filter(c=>diasAteVencer(c.vencimento)===0);
+  } else if(periodo===0){
     list = DB.clientes.filter(c=>diasAteVencer(c.vencimento)<0).sort((a,b)=>diasAteVencer(a.vencimento)-diasAteVencer(b.vencimento));
   } else if(periodo===100 || isNaN(periodo)){
     list = [...DB.clientes].sort((a,b)=>new Date(a.vencimento||0)-new Date(b.vencimento||0));
