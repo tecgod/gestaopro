@@ -1214,7 +1214,7 @@ tbody td:first-child{color:var(--text);font-weight:500}
 
       <div class="section-label" style="margin-top:16px">Serviço</div>
       <div class="form-row cols-3">
-        <div class="field"><label>Servidor Atual</label>
+        <div class="field"><label>Servidor Atual *</label>
           <select id="cl-servidor" onchange="autoPreencherTipoServidor()">
             <option value="">Selecionar...</option>
           </select>
@@ -3045,7 +3045,9 @@ async function saveCliente(){
   const nome = document.getElementById('cl-nome').value.trim();
   const whatsapp = document.getElementById('cl-whatsapp').value.trim();
   const venc = document.getElementById('cl-vencimento').value;
+  const servidor = document.getElementById('cl-servidor').value;
   if(!nome){ toast('Informe o nome do cliente','error'); return; }
+  if(!servidor){ toast('Selecione o servidor do cliente','error'); document.getElementById('cl-servidor').focus(); return; }
   if(!venc){ toast('Informe a data de vencimento','error'); return; }
 
   const idNoCampo = document.getElementById('cl-id').value.trim();
