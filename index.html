@@ -2102,6 +2102,7 @@ async function hashPin(pin){
 
 // ── entrada no sistema ────────────────────────────────────────
 function entrarNoSistema(){
+  sessionStorage.setItem('gp_logado','1');
   document.getElementById('login-screen').style.display='none';
   document.getElementById('app').classList.add('visible');
   document.getElementById('fab-btn').style.display='flex';
@@ -2365,6 +2366,7 @@ async function atualizarBotaoBiometria(){
 atualizarBotaoBiometria();
 
 function doLogout(){
+  sessionStorage.removeItem('gp_logado');
   document.getElementById('login-screen').style.display='flex';
   document.getElementById('app').classList.remove('visible');
   document.getElementById('login-password').value='';
@@ -4504,8 +4506,15 @@ if('serviceWorker' in navigator){
 // ════════════════════════════════════════
 //  INIT CHECK (se já logado em sessão)
 // ════════════════════════════════════════
-// Mantém tela de login por padrão — usuário precisa autenticar sempre
-document.getElementById('fab-btn').style.display='none';
+if(sessionStorage.getItem('gp_logado')==='1'){
+  // Sessão ativa — entra direto sem pedir senha
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('app').classList.add('visible');
+  document.getElementById('fab-btn').style.display='flex';
+  init();
+} else {
+  document.getElementById('fab-btn').style.display='none';
+}
 </script>
 </body>
 </html>
