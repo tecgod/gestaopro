@@ -1302,6 +1302,9 @@ tbody td:first-child{color:var(--text);font-weight:500}
           </select>
         </div>
       </div>
+      <div class="form-row">
+        <div class="field"><label>Link do Painel</label><input type="url" id="srv-link" placeholder="https://painel.exemplo.com"></div>
+      </div>
       <input type="hidden" id="srv-id">
     </div>
     <div class="modal-footer">
@@ -2884,6 +2887,7 @@ function renderClientes(){
       <div class="client-card-meta" style="margin-bottom:8px">
         <span class="client-card-info">📱 ${c.whatsapp||'-'}</span>
         <span class="client-card-info" style="cursor:pointer;color:var(--accent2);text-decoration:underline" onclick="irParaServidor('${c.servidor}')" title="Ir para servidor">🖥️ ${c.servidor||'-'}</span>
+        ${(()=>{ const srv=DB.servidores.find(s=>s.nome===c.servidor); return srv&&srv.link ? `<a href="${/^https?:\/\//i.test(srv.link)?srv.link:'https://'+srv.link}" target="_blank" rel="noopener noreferrer" class="client-card-info" style="color:var(--accent2);text-decoration:underline" title="Abrir painel do servidor">🔗 Painel</a>` : ''; })()}
         <span class="badge badge-blue">${c.tipo||'1x1'}</span>
         <span class="nivel-badge ${getNivelCompleto(c.desde).cls}" style="font-size:10px">${getNivelCompleto(c.desde).nome}</span>
       </div>
@@ -3487,6 +3491,7 @@ function renderServidores(){
       </div>
       <div style="font-size:12px;color:var(--text3)">🆔 ${s.id}</div>
       ${s.obs?`<div style="font-size:13px;color:var(--text2);margin-top:6px">📝 ${s.obs}</div>`:''}
+      ${s.link?`<div style="margin-top:8px"><a href="${/^https?:\/\//i.test(s.link)?s.link:'https://'+s.link}" target="_blank" rel="noopener noreferrer" style="font-size:13px;color:var(--accent2);text-decoration:none;display:inline-flex;align-items:center;gap:6px">🔗 Acessar painel do servidor</a></div>`:''}
     </div>`;
   }).join('');
 }
@@ -3499,12 +3504,14 @@ function openServModal(id=null){
     document.getElementById('srv-nome').value=s.nome||'';
     document.getElementById('srv-obs').value=s.obs||'';
     document.getElementById('srv-tipo').value=s.tipo||'1x1';
+    document.getElementById('srv-link').value=s.link||'';
   } else {
     document.getElementById('modal-servidor-title').textContent='Novo Servidor';
     document.getElementById('srv-id').value='';
     document.getElementById('srv-nome').value='';
     document.getElementById('srv-obs').value='';
     document.getElementById('srv-tipo').value='1x1';
+    document.getElementById('srv-link').value='';
   }
   document.getElementById('modal-servidor').classList.add('open');
 }
@@ -3514,7 +3521,7 @@ async function saveServidor(){
   if(!nome){ toast('Informe o nome do servidor','error'); return; }
   const id = document.getElementById('srv-id').value || uidServ();
   const isNew = !document.getElementById('srv-id').value;
-  const serv = { id, nome, obs:document.getElementById('srv-obs').value, tipo:document.getElementById('srv-tipo').value };
+  const serv = { id, nome, obs:document.getElementById('srv-obs').value, tipo:document.getElementById('srv-tipo').value, link:document.getElementById('srv-link').value.trim() };
   if(isNew) DB.servidores.push(serv);
   else { const i=DB.servidores.findIndex(s=>String(s.id)===String(id)); if(i>=0) DB.servidores[i]=serv; }
   saveLocal();
