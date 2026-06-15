@@ -1215,7 +1215,7 @@ tbody td:first-child{color:var(--text);font-weight:500}
 
       <div class="section-label" style="margin-top:16px">Serviço</div>
       <div class="form-row cols-3">
-        <div class="field"><label>Servidor Atual *</label>
+        <div class="field"><label>Servidor Atual * <a id="cl-servidor-link-atalho" href="#" target="_blank" rel="noopener noreferrer" style="display:none;color:var(--accent2);font-size:10px;font-weight:600;text-decoration:none;margin-left:6px">🔗 abrir painel</a></label>
           <select id="cl-servidor" onchange="autoPreencherTipoServidor()">
             <option value="">Selecionar...</option>
           </select>
@@ -1753,12 +1753,26 @@ function addDiasVencimento(dias){
 function autoPreencherTipoServidor(){
   const nomeServidor = document.getElementById('cl-servidor').value;
   const lbl = document.getElementById('cl-tipo-auto-label');
+  atualizarAtalhoLinkServidor(nomeServidor);
   if(!nomeServidor){ lbl.style.display='none'; return; }
   const srv = DB.servidores.find(s => s.nome === nomeServidor);
   if(srv && srv.tipo){
     document.getElementById('cl-tipo').value = srv.tipo;
     lbl.style.display='inline';
     setTimeout(()=>{ lbl.style.display='none'; }, 2500);
+  }
+}
+
+function atualizarAtalhoLinkServidor(nomeServidor){
+  const atalho = document.getElementById('cl-servidor-link-atalho');
+  if(!atalho) return;
+  const srv = DB.servidores.find(s => s.nome === nomeServidor);
+  if(srv && srv.link){
+    atalho.href = /^https?:\/\//i.test(srv.link) ? srv.link : 'https://'+srv.link;
+    atalho.style.display='inline';
+  } else {
+    atalho.style.display='none';
+    atalho.href='#';
   }
 }
 
@@ -2923,6 +2937,7 @@ function openClientModal(id=null){
     document.getElementById('cl-desde').value=c.desde||'';
     document.getElementById('cl-servidor').value=c.servidor||'';
     document.getElementById('cl-tipo').value=c.tipo||'1x1';
+    atualizarAtalhoLinkServidor(c.servidor||'');
     document.getElementById('cl-vencimento').value=c.vencimento||'';
     document.getElementById('cl-status').value=c.status||'Ativo';
     document.getElementById('cl-sorteio').checked=c.sorteio==='true'||c.sorteio===true;
@@ -2935,6 +2950,7 @@ function openClientModal(id=null){
     ['cl-nome','cl-whatsapp','cl-nascimento','cl-desde','cl-obs'].forEach(f=>document.getElementById(f).value='');
     document.getElementById('cl-servidor').value='';
     document.getElementById('cl-tipo').value='1x1';
+    atualizarAtalhoLinkServidor('');
     document.getElementById('cl-vencimento').value=today();
     document.getElementById('cl-status').value='Ativo';
     document.getElementById('cl-sorteio').checked=true;
