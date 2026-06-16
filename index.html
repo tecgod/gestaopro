@@ -477,6 +477,11 @@ tbody td:first-child{color:var(--text);font-weight:500}
 .client-card-body{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
 .client-card-info{font-size:12px;color:var(--text3)}
 
+/* SERVIDOR LINK CHIP */
+.servidor-link-chip{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:#fff;background:linear-gradient(135deg,#3b82f6,#6366f1);border:1px solid rgba(99,102,241,.5);border-radius:999px;padding:3px 11px 3px 9px;text-decoration:none;line-height:1.5;box-shadow:0 1px 3px rgba(59,130,246,.35);transition:filter .15s,transform .15s}
+.servidor-link-chip:hover{filter:brightness(1.1);transform:translateY(-1px)}
+.servidor-link-chip .dot{width:6px;height:6px;border-radius:50%;background:#86efac;box-shadow:0 0 4px #86efac;flex:none}
+
 /* CHIPS */
 .chip{
   display:inline-flex;align-items:center;gap:4px;
@@ -1215,10 +1220,11 @@ tbody td:first-child{color:var(--text);font-weight:500}
 
       <div class="section-label" style="margin-top:16px">Serviço</div>
       <div class="form-row cols-3">
-        <div class="field"><label>Servidor Atual * <a id="cl-servidor-link-atalho" href="#" target="_blank" rel="noopener noreferrer" style="display:none;color:var(--accent2);font-size:10px;font-weight:600;text-decoration:none;margin-left:6px">🔗 abrir painel</a></label>
+        <div class="field"><label>Servidor Atual *</label>
           <select id="cl-servidor" onchange="autoPreencherTipoServidor()">
             <option value="">Selecionar...</option>
           </select>
+          <a id="cl-servidor-link-atalho" href="#" target="_blank" rel="noopener noreferrer" class="servidor-link-chip" style="display:none;margin-top:7px;justify-content:center;width:fit-content"><span class="dot"></span><span id="cl-servidor-link-atalho-nome"></span></a>
         </div>
         <div class="field"><label>Tipo do Servidor <span id="cl-tipo-auto-label" style="color:var(--green);font-size:10px;font-weight:600;display:none">✔ automático</span></label>
           <select id="cl-tipo">
@@ -1765,11 +1771,13 @@ function autoPreencherTipoServidor(){
 
 function atualizarAtalhoLinkServidor(nomeServidor){
   const atalho = document.getElementById('cl-servidor-link-atalho');
+  const nomeSpan = document.getElementById('cl-servidor-link-atalho-nome');
   if(!atalho) return;
   const srv = DB.servidores.find(s => s.nome === nomeServidor);
   if(srv && srv.link){
     atalho.href = /^https?:\/\//i.test(srv.link) ? srv.link : 'https://'+srv.link;
-    atalho.style.display='inline';
+    if(nomeSpan) nomeSpan.textContent = srv.nome;
+    atalho.style.display='inline-flex';
   } else {
     atalho.style.display='none';
     atalho.href='#';
@@ -2716,7 +2724,7 @@ function irParaAniversariantes(){
         </div>
         <div class="client-card-meta" style="margin-bottom:8px">
           <span class="client-card-info">📱 ${c.whatsapp||'-'}</span>
-          <span class="client-card-info">🖥️ <span style="cursor:pointer;color:var(--accent2);text-decoration:underline" onclick="irParaServidor('${c.servidor}')">${c.servidor||'-'}</span></span>
+          ${chipServidorLink(c.servidor)}
           <span class="badge badge-blue">${c.tipo||'1x1'}</span>
         </div>
         <div class="client-card-body">
@@ -2811,6 +2819,14 @@ function enviarParabensAniversario(){
   closeModal('modal-parabens-aniv');
 }
 
+function chipServidorLink(nomeServidor){
+  if(!nomeServidor) return '';
+  const srv = DB.servidores.find(s=>s.nome===nomeServidor);
+  if(!srv || !srv.link) return `<span class="client-card-info">🖥️ ${nomeServidor}</span>`;
+  const url = /^https?:\/\//i.test(srv.link) ? srv.link : 'https://'+srv.link;
+  return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="servidor-link-chip" title="Abrir painel: ${srv.nome}"><span class="dot"></span>${srv.nome}</a>`;
+}
+
 function irParaServidor(nomeServidor){
   if(!nomeServidor) return;
   showPage('servidores');
@@ -2901,8 +2917,7 @@ function renderClientes(){
       </div>
       <div class="client-card-meta" style="margin-bottom:8px">
         <span class="client-card-info">📱 ${c.whatsapp||'-'}</span>
-        <span class="client-card-info" style="cursor:pointer;color:var(--accent2);text-decoration:underline" onclick="irParaServidor('${c.servidor}')" title="Ir para servidor">🖥️ ${c.servidor||'-'}</span>
-        ${(()=>{ const srv=DB.servidores.find(s=>s.nome===c.servidor); return srv&&srv.link ? `<a href="${/^https?:\/\//i.test(srv.link)?srv.link:'https://'+srv.link}" target="_blank" rel="noopener noreferrer" class="client-card-info" style="color:var(--accent2);text-decoration:underline" title="Abrir painel do servidor">🔗 Painel</a>` : ''; })()}
+        ${chipServidorLink(c.servidor)}
         <span class="badge badge-blue">${c.tipo||'1x1'}</span>
         <span class="nivel-badge ${getNivelCompleto(c.desde).cls}" style="font-size:10px">${getNivelCompleto(c.desde).nome}</span>
       </div>
@@ -3318,7 +3333,8 @@ function renderVencimentos(){
       </div>
       <div class="client-card-meta" style="margin-bottom:8px">
         <span class="client-card-info">📱 ${c.whatsapp||'-'}</span>
-        <span class="client-card-info" style="cursor:pointer;color:var(--accent2);text-decoration:underline" onclick="irParaServidor('${c.servidor}')" title="Ir para servidor">🖥️ ${c.servidor||'-'} • ${c.tipo||'1x1'}</span>
+        ${chipServidorLink(c.servidor)}
+        <span class="badge badge-blue">${c.tipo||'1x1'}</span>
         ${getStatusBadge(c.status, dias)}
       </div>
       <div class="client-card-body">
