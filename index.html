@@ -2035,43 +2035,75 @@ function verificarNotificacoes(){
   document.getElementById('modal-notificacoes').classList.add('open');
 }
 
-// Envia notificação push nativa do navegador/celular
-function enviarPushNotificacao(titulo, corpo, icone){
+// Envia notificação push nativa do navegador/celular (via Service Worker, com vibração)
+function enviarPushNotificacao(titulo, corpo, icone, vibratePattern){
   if(!('Notification' in window)) return;
   if(Notification.permission !== 'granted') return;
+  const icon = icone || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="%233b82f6"/><text y="46" font-size="40" text-anchor="middle" x="32">🚀</text></svg>';
+  const badge = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="%233b82f6"/><text y="46" font-size="40" text-anchor="middle" x="32">⚠️</text></svg>';
+  const vibrate = vibratePattern || [400,200,400,200,400];
   try{
-    new Notification(titulo, {
-      body: corpo,
-      icon: icone || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="%233b82f6"/><text y="46" font-size="40" text-anchor="middle" x="32">🚀</text></svg>',
-      badge: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="%233b82f6"/><text y="46" font-size="40" text-anchor="middle" x="32">⚠️</text></svg>',
-      tag: 'gestaopro-vencimento',
-      requireInteraction: true
-    });
+    if(navigator.serviceWorker && navigator.serviceWorker.controller){
+      // Usa o Service Worker (permite vibração e funciona melhor com app instalado/em background)
+      navigator.serviceWorker.ready.then(reg => {
+        reg.showNotification(titulo, {
+          body: corpo, icon, badge, tag: 'gestaopro-vencimento',
+          vibrate, requireInteraction: true
+        });
+      });
+    } else {
+      new Notification(titulo, { body: corpo, icon, badge, tag: 'gestaopro-vencimento', requireInteraction: true });
+    }
+    if(navigator.vibrate) navigator.vibrate(vibrate); // vibra também se a aba estiver em foco
   }catch(e){}
 }
 
-// Verificação silenciosa (só push, sem popup na tela) — roda a cada hora
+// Verificação silenciosa (só push, sem popup na tela) — roda a cada hora e nos horários fixos do dia
 function verificarNotificacoesSilencioso(){
   if(!('Notification' in window) || Notification.permission !== 'granted') return;
-  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const vencidos = [];
+  const aVencer = [];
   DB.clientes.forEach(c => {
     if(!c.nome) return;
     const diasVenc = diasAteVencer(c.vencimento);
-    if(diasVenc === 2){
-      enviarPushNotificacao(
-        '⚠️ Vencimento em 2 dias — GestorPro v2.0',
-        `${c.nome} vence em 2 dias (${fmtDate(c.vencimento)}). Avise o cliente!`
-      );
-    } else if(diasVenc === 1){
-      enviarPushNotificacao(
-        '🔴 Vencimento AMANHÃ — GestorPro v2.0',
-        `${c.nome} vence amanhã! Renove agora.`
-      );
-    } else if(diasVenc === 0){
-      enviarPushNotificacao(
-        '🚨 Vencimento HOJE — GestorPro v2.0',
-        `${c.nome} vence hoje! Acesse o sistema.`
-      );
+    if(diasVenc < 0) vencidos.push(c);
+    else if(diasVenc <= 3) aVencer.push(c);
+  });
+  if(vencidos.length > 0){
+    enviarPushNotificacao(
+      `⛔ ${vencidos.length} cliente(s) vencido(s)`,
+      vencidos.length === 1
+        ? `${vencidos[0].nome} está vencido desde ${fmtDate(vencidos[0].vencimento)}.`
+        : `${vencidos.slice(0,3).map(c=>c.nome).join(', ')}${vencidos.length>3?` e mais ${vencidos.length-3}`:''} estão com a assinatura vencida.`
+    );
+  }
+  if(aVencer.length > 0){
+    enviarPushNotificacao(
+      `⚠️ ${aVencer.length} cliente(s) a vencer em até 3 dias`,
+      aVencer.length === 1
+        ? `${aVencer[0].nome} vence em ${diasAteVencer(aVencer[0].vencimento)===0?'HOJE':diasAteVencer(aVencer[0].vencimento)+' dia(s)'} (${fmtDate(aVencer[0].vencimento)}).`
+        : `${aVencer.slice(0,3).map(c=>c.nome).join(', ')}${aVencer.length>3?` e mais ${aVencer.length-3}`:''} vencem nos próximos 3 dias.`
+    );
+  }
+}
+
+// Horários fixos de checagem automática: 09:00, 12:00, 15:00 e 18:00
+const HORARIOS_CHECAGEM = ['09:00','12:00','15:00','18:00'];
+function chaveChecagemHoje(horario){
+  const hoje = new Date();
+  return `gp_check_${hoje.getFullYear()}-${hoje.getMonth()+1}-${hoje.getDate()}_${horario}`;
+}
+function verificarHorariosFixos(){
+  const agora = new Date();
+  const hhmm = String(agora.getHours()).padStart(2,'0') + ':' + String(agora.getMinutes()).padStart(2,'0');
+  HORARIOS_CHECAGEM.forEach(horario => {
+    if(hhmm === horario){
+      const chave = chaveChecagemHoje(horario);
+      if(!localStorage.getItem(chave)){
+        localStorage.setItem(chave, '1');
+        if(GAS_URL) syncData().then(() => verificarNotificacoesSilencioso()).catch(()=>verificarNotificacoesSilencioso());
+        else verificarNotificacoesSilencioso();
+      }
     }
   });
 }
@@ -2457,6 +2489,9 @@ function init(){
   setTimeout(verificarNotificacoes, 600);
   // Recheck a cada 1 hora (silencioso — só push, sem popup repetido)
   setInterval(verificarNotificacoesSilencioso, 60 * 60 * 1000);
+  // Checagem nos horários fixos: 09:00, 12:00, 15:00 e 18:00 (enquanto o app estiver aberto/em background ativo)
+  setInterval(verificarHorariosFixos, 30 * 1000);
+  verificarHorariosFixos();
 }
 
 function loadLocalData(){
@@ -4552,15 +4587,68 @@ const manifest = {
 const blob = new Blob([JSON.stringify(manifest)],{type:'application/json'});
 document.getElementById('pwa-manifest').href = URL.createObjectURL(blob);
 
-// Service Worker para PWA
+// Service Worker para PWA + notificações com vibração + tentativa de checagem em segundo plano
 if('serviceWorker' in navigator){
   const sw = `
-    const CACHE='gestaopro-v1';
-    self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(['/']))));
+    const CACHE='gestaopro-v2';
+    self.addEventListener('install',e=>{ self.skipWaiting(); e.waitUntil(caches.open(CACHE).then(c=>c.addAll(['/']))); });
+    self.addEventListener('activate',e=>self.clients.claim());
     self.addEventListener('fetch',e=>e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request))));
+
+    // Checagem em segundo plano (best-effort — depende do navegador/SO permitir Periodic Background Sync)
+    self.addEventListener('periodicsync', (event) => {
+      if(event.tag === 'gestaopro-check-vencimentos'){
+        event.waitUntil((async () => {
+          try{
+            const clientsList = await self.clients.matchAll({type:'window'});
+            if(clientsList.length){
+              clientsList.forEach(c => c.postMessage({tipo:'CHECAR_VENCIMENTOS'}));
+            } else {
+              await self.registration.showNotification('🔔 GestorPro v2.0', {
+                body: 'Abra o app para sincronizar e ver clientes vencidos ou a vencer.',
+                tag: 'gestaopro-bg-check',
+                vibrate: [300,150,300],
+                requireInteraction: false
+              });
+            }
+          }catch(e){}
+        })());
+      }
+    });
+
+    self.addEventListener('message', (event) => {
+      if(event.data && event.data.tipo === 'SHOW_NOTIF'){
+        const d = event.data;
+        self.registration.showNotification(d.titulo, {
+          body: d.corpo,
+          icon: d.icone,
+          badge: d.badge,
+          tag: d.tag || 'gestaopro-vencimento',
+          vibrate: d.vibrate || [400,200,400,200,400],
+          requireInteraction: true
+        });
+      }
+    });
   `;
   const swBlob = new Blob([sw],{type:'application/javascript'});
-  navigator.serviceWorker.register(URL.createObjectURL(swBlob)).catch(()=>{});
+  navigator.serviceWorker.register(URL.createObjectURL(swBlob)).then(async (reg) => {
+    // Tenta registrar Periodic Background Sync (Chrome/Android, app instalado — melhor esforço, sem garantia de horário exato)
+    try{
+      if('periodicSync' in reg){
+        const status = await navigator.permissions.query({name:'periodic-background-sync'});
+        if(status.state === 'granted'){
+          await reg.periodicSync.register('gestaopro-check-vencimentos', { minInterval: 60*60*1000 });
+        }
+      }
+    }catch(e){}
+  }).catch(()=>{});
+
+  // Recebe pedido do SW para checar vencimentos quando o app está aberto
+  navigator.serviceWorker.addEventListener('message', (event) => {
+    if(event.data && event.data.tipo === 'CHECAR_VENCIMENTOS'){
+      verificarNotificacoesSilencioso();
+    }
+  });
 }
 
 // ════════════════════════════════════════
