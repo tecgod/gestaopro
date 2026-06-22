@@ -1886,7 +1886,10 @@ function alertaSonoro(tipo){
 // ════════════════════════════════════════
 //         NOTIFICAÇÕES AUTOMÁTICAS
 // ════════════════════════════════════════
+let _notifDisparada = false;
 function verificarNotificacoes(){
+  // Evita abrir o popup duas vezes na mesma sessão (ex: dados locais + após sync GAS)
+  if(_notifDisparada) return;
   const hoje = new Date(); hoje.setHours(0,0,0,0);
   const diaHoje = hoje.getDate();
   const mesHoje = hoje.getMonth()+1;
@@ -2024,6 +2027,7 @@ function verificarNotificacoes(){
   `).join('');
 
   document.getElementById('modal-notificacoes').classList.add('open');
+  _notifDisparada = true;
 }
 
 // Envia notificação push nativa do navegador/celular
@@ -2445,9 +2449,10 @@ function init(){
   if('Notification' in window && Notification.permission === 'default'){
     setTimeout(()=> Notification.requestPermission(), 1500);
   }
-  // Se não há GAS configurado, verifica notificações com dados locais após breve delay
-  // (quando há GAS, verificarNotificacoes é chamada ao final do syncData, com dados completos)
-  if(!GAS_URL){ setTimeout(verificarNotificacoes, 600); }
+  // Sempre dispara o popup com os dados locais já carregados pelo loadLocalData.
+  // Se houver GAS, o syncData também chama verificarNotificacoes ao terminar,
+  // mas a trava _notifDisparada impede que abra duas vezes.
+  setTimeout(verificarNotificacoes, 800);
   // Recheck a cada 1 hora (silencioso — só push, sem popup repetido)
   setInterval(verificarNotificacoesSilencioso, 60 * 60 * 1000);
 }
