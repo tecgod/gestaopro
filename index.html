@@ -967,10 +967,8 @@ tbody td:first-child{color:var(--text);font-weight:500}
       <div class="search-bar">
         <select id="filter-venc-periodo" class="field" style="width:auto;padding:10px 12px" onchange="renderVencimentos()">
           <option value="hoje">Vence Hoje</option>
-          <option value="venc3">Hoje + Próx. 3 dias</option>
+          <option value="venc3">Próximos 3 dias</option>
           <option value="7">Próximos 7 dias</option>
-          <option value="15">Próximos 15 dias</option>
-          <option value="30">Próximos 30 dias</option>
           <option value="0">Já vencidos</option>
           <option value="all">Todos</option>
         </select>
@@ -1916,18 +1914,29 @@ function verificarNotificacoes(){
       }
     }
 
-    // ── 1. Vencendo em 0, 1 ou 2 dias ──
+    // ── 1. Já vencidos e vencendo em até 7 dias (incluindo hoje) ──
     const diasVenc = diasAteVencer(c.vencimento);
-    if(diasVenc === 2){
+    if(diasVenc < 0){
       avisos.push({
         tipo: 'vencimento',
-        icon: '⚠️',
-        cor: 'var(--yellow)',
-        titulo: 'Vencimento em 2 dias',
-        msg: `<b>${c.nome}</b> vence em <b>2 dias</b> (${fmtDate(c.vencimento)}).`,
+        icon: '⛔',
+        cor: 'var(--red)',
+        titulo: `Vencido há ${Math.abs(diasVenc)} dia${Math.abs(diasVenc)>1?'s':''}`,
+        msg: `<b>${c.nome}</b> está <b>vencido</b> desde ${fmtDate(c.vencimento)}.`,
         whatsapp: c.whatsapp,
         diasVenc,
-        pushMsg: `⚠️ ${c.nome} vence em 2 dias! (${fmtDate(c.vencimento)})`
+        pushMsg: `⛔ ${c.nome} está vencido desde ${fmtDate(c.vencimento)}!`
+      });
+    } else if(diasVenc === 0){
+      avisos.push({
+        tipo: 'vencimento',
+        icon: '🚨',
+        cor: 'var(--red)',
+        titulo: 'Vencimento HOJE!',
+        msg: `<b>${c.nome}</b> vence <b>hoje</b>!`,
+        whatsapp: c.whatsapp,
+        diasVenc,
+        pushMsg: `🚨 ${c.nome} vence HOJE! Acesse o sistema para renovar.`
       });
     } else if(diasVenc === 1){
       avisos.push({
@@ -1940,16 +1949,16 @@ function verificarNotificacoes(){
         diasVenc,
         pushMsg: `🔴 ${c.nome} vence AMANHÃ! Renove agora.`
       });
-    } else if(diasVenc === 0){
+    } else if(diasVenc >= 2 && diasVenc <= 7){
       avisos.push({
         tipo: 'vencimento',
-        icon: '🚨',
-        cor: 'var(--red)',
-        titulo: 'Vencimento HOJE!',
-        msg: `<b>${c.nome}</b> vence <b>hoje</b>!`,
+        icon: '⚠️',
+        cor: 'var(--yellow)',
+        titulo: `Vencimento em ${diasVenc} dias`,
+        msg: `<b>${c.nome}</b> vence em <b>${diasVenc} dias</b> (${fmtDate(c.vencimento)}).`,
         whatsapp: c.whatsapp,
         diasVenc,
-        pushMsg: `🚨 ${c.nome} vence HOJE! Acesse o sistema para renovar.`
+        pushMsg: `⚠️ ${c.nome} vence em ${diasVenc} dias! (${fmtDate(c.vencimento)})`
       });
     }
 
@@ -2012,7 +2021,7 @@ function verificarNotificacoes(){
 
   const body = document.getElementById('notif-body');
   body.innerHTML = avisos.map(a => `
-    <div style="background:var(--bg3);border:1px solid var(--border);border-left:3px solid ${a.cor};border-radius:var(--radius);padding:12px 14px${a.tipo==='vencimento'?';cursor:pointer;transition:opacity .15s':''}" ${a.tipo==='vencimento'?'onclick="closeModal(\'modal-notificacoes\');irParaVencidosHojeE3Dias()" title="Clique para ver lista de vencidos e próximos a vencer"':''}>
+    <div style="background:var(--bg3);border:1px solid var(--border);border-left:3px solid ${a.cor};border-radius:var(--radius);padding:12px 14px${a.tipo==='vencimento'?';cursor:pointer;transition:opacity .15s':''}" ${a.tipo==='vencimento'?'onclick="closeModal(\'modal-notificacoes\');irParaVencimentos7()" title="Clique para ver lista de vencidos e próximos a vencer"':''}>
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
         <div>
           <div style="font-size:12px;font-weight:600;color:${a.cor};text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">${a.icon} ${a.titulo}${a.tipo==='vencimento'?' <span style="font-size:10px;opacity:.6;font-weight:400;text-transform:none;letter-spacing:0">↗ ver lista</span>':''}</div>
