@@ -1886,10 +1886,7 @@ function alertaSonoro(tipo){
 // ════════════════════════════════════════
 //         NOTIFICAÇÕES AUTOMÁTICAS
 // ════════════════════════════════════════
-let _notifDisparada = false;
 function verificarNotificacoes(){
-  // Evita abrir o popup duas vezes na mesma sessão (ex: dados locais + após sync GAS)
-  if(_notifDisparada) return;
   const hoje = new Date(); hoje.setHours(0,0,0,0);
   const diaHoje = hoje.getDate();
   const mesHoje = hoje.getMonth()+1;
@@ -2015,10 +2012,10 @@ function verificarNotificacoes(){
 
   const body = document.getElementById('notif-body');
   body.innerHTML = avisos.map(a => `
-    <div style="background:var(--bg3);border:1px solid var(--border);border-left:3px solid ${a.cor};border-radius:var(--radius);padding:12px 14px${a.tipo==='vencimento'?';cursor:pointer':''};" ${a.tipo==='vencimento'?'onclick="closeModal(\'modal-notificacoes\');irParaVencidosHojeE3Dias()" title="Clique para ver clientes vencidos e próximos (hoje + 3 dias)"':''}>
+    <div style="background:var(--bg3);border:1px solid var(--border);border-left:3px solid ${a.cor};border-radius:var(--radius);padding:12px 14px${a.tipo==='vencimento'?';cursor:pointer;transition:opacity .15s':''}" ${a.tipo==='vencimento'?'onclick="closeModal(\'modal-notificacoes\');irParaVencidosHojeE3Dias()" title="Clique para ver lista de vencidos e próximos a vencer"':''}>
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
         <div>
-          <div style="font-size:12px;font-weight:600;color:${a.cor};text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">${a.icon} ${a.titulo}${a.tipo==='vencimento'?' <span style="font-size:10px;opacity:.7;font-weight:400;text-transform:none">— clique para ver lista</span>':''}</div>
+          <div style="font-size:12px;font-weight:600;color:${a.cor};text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">${a.icon} ${a.titulo}${a.tipo==='vencimento'?' <span style="font-size:10px;opacity:.6;font-weight:400;text-transform:none;letter-spacing:0">↗ ver lista</span>':''}</div>
           <div style="font-size:13px;color:var(--text2)">${a.msg}</div>
         </div>
         ${a.whatsapp ? `<button class="btn btn-whatsapp btn-sm btn-icon" title="Avisar pelo WhatsApp" onclick="event.stopPropagation();abrirWhatsappNotif('${a.whatsapp}','${a.tipo}')">📲</button>` : ''}
@@ -2027,7 +2024,6 @@ function verificarNotificacoes(){
   `).join('');
 
   document.getElementById('modal-notificacoes').classList.add('open');
-  _notifDisparada = true;
 }
 
 // Envia notificação push nativa do navegador/celular
@@ -2449,10 +2445,7 @@ function init(){
   if('Notification' in window && Notification.permission === 'default'){
     setTimeout(()=> Notification.requestPermission(), 1500);
   }
-  // Sempre dispara o popup com os dados locais já carregados pelo loadLocalData.
-  // Se houver GAS, o syncData também chama verificarNotificacoes ao terminar,
-  // mas a trava _notifDisparada impede que abra duas vezes.
-  setTimeout(verificarNotificacoes, 800);
+  setTimeout(verificarNotificacoes, 600);
   // Recheck a cada 1 hora (silencioso — só push, sem popup repetido)
   setInterval(verificarNotificacoesSilencioso, 60 * 60 * 1000);
 }
@@ -2556,7 +2549,6 @@ async function syncData(){
     if(txt) txt.textContent='Sincronizado';
     toast('✅ Dados sincronizados com Google Sheets','success');
     renderDashboard();
-    verificarNotificacoes();
   }catch(e){
     if(dot){ dot.className='sync-dot'; dot.style.background='var(--red)'; }
     if(txt) txt.textContent='Erro sync';
