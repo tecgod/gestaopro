@@ -541,6 +541,12 @@ tbody td:first-child{color:var(--text);font-weight:500}
 @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 @keyframes spin{to{transform:rotate(360deg)}}
+@keyframes destaqueCard{
+  0%,100%{ box-shadow:none; background:var(--card); }
+  20%,60%{ box-shadow:0 0 0 3px var(--accent2); background:rgba(96,165,250,.16); }
+  40%,80%{ box-shadow:0 0 0 1px var(--accent2); background:var(--card); }
+}
+.card-destaque{ animation:destaqueCard 1.1s ease-in-out 2; border-radius:var(--radius2); }
 .spin{animation:spin 1s linear infinite;display:inline-block}
 
 /* ══════════════════════ TIMELINE ══════════════════════ */
@@ -1924,6 +1930,7 @@ function verificarNotificacoes(){
         titulo: `Vencido há ${Math.abs(diasVenc)} dia${Math.abs(diasVenc)>1?'s':''}`,
         msg: `<b>${c.nome}</b> está <b>vencido</b> desde ${fmtDate(c.vencimento)}.`,
         whatsapp: c.whatsapp,
+        clienteId: c.id,
         diasVenc,
         pushMsg: `⛔ ${c.nome} está vencido desde ${fmtDate(c.vencimento)}!`
       });
@@ -1935,6 +1942,7 @@ function verificarNotificacoes(){
         titulo: 'Vencimento HOJE!',
         msg: `<b>${c.nome}</b> vence <b>hoje</b>!`,
         whatsapp: c.whatsapp,
+        clienteId: c.id,
         diasVenc,
         pushMsg: `🚨 ${c.nome} vence HOJE! Acesse o sistema para renovar.`
       });
@@ -1946,6 +1954,7 @@ function verificarNotificacoes(){
         titulo: 'Vencimento AMANHÃ!',
         msg: `<b>${c.nome}</b> vence <b>amanhã</b> (${fmtDate(c.vencimento)})!`,
         whatsapp: c.whatsapp,
+        clienteId: c.id,
         diasVenc,
         pushMsg: `🔴 ${c.nome} vence AMANHÃ! Renove agora.`
       });
@@ -1957,6 +1966,7 @@ function verificarNotificacoes(){
         titulo: `Vencimento em ${diasVenc} dias`,
         msg: `<b>${c.nome}</b> vence em <b>${diasVenc} dias</b> (${fmtDate(c.vencimento)}).`,
         whatsapp: c.whatsapp,
+        clienteId: c.id,
         diasVenc,
         pushMsg: `⚠️ ${c.nome} vence em ${diasVenc} dias! (${fmtDate(c.vencimento)})`
       });
@@ -2021,10 +2031,10 @@ function verificarNotificacoes(){
 
   const body = document.getElementById('notif-body');
   body.innerHTML = avisos.map(a => `
-    <div style="background:var(--bg3);border:1px solid var(--border);border-left:3px solid ${a.cor};border-radius:var(--radius);padding:12px 14px${a.tipo==='vencimento'?';cursor:pointer;transition:opacity .15s':''}" ${a.tipo==='vencimento'?'onclick="closeModal(\'modal-notificacoes\');irParaVencimentos7()" title="Clique para ver lista de vencidos e próximos a vencer"':''}>
+    <div style="background:var(--bg3);border:1px solid var(--border);border-left:3px solid ${a.cor};border-radius:var(--radius);padding:12px 14px${a.tipo==='vencimento'?';cursor:pointer;transition:opacity .15s':''}" ${a.tipo==='vencimento'?`onclick="closeModal('modal-notificacoes');irParaClienteVencimento('${a.clienteId}',${a.diasVenc})" title="Clique para ver ${a.nome||'o cliente'} no filtro correspondente ao seu status"`:''}>
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
         <div>
-          <div style="font-size:12px;font-weight:600;color:${a.cor};text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">${a.icon} ${a.titulo}${a.tipo==='vencimento'?' <span style="font-size:10px;opacity:.6;font-weight:400;text-transform:none;letter-spacing:0">↗ ver lista</span>':''}</div>
+          <div style="font-size:12px;font-weight:600;color:${a.cor};text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">${a.icon} ${a.titulo}${a.tipo==='vencimento'?' <span style="font-size:10px;opacity:.6;font-weight:400;text-transform:none;letter-spacing:0">↗ ver cliente</span>':''}</div>
           <div style="font-size:13px;color:var(--text2)">${a.msg}</div>
         </div>
         ${a.whatsapp ? `<button class="btn btn-whatsapp btn-sm btn-icon" title="Avisar pelo WhatsApp" onclick="event.stopPropagation();abrirWhatsappNotif('${a.whatsapp}','${a.tipo}')">📲</button>` : ''}
@@ -2737,6 +2747,36 @@ function irParaVencimentos7(){
     if(sel){ sel.value='7'; renderVencimentos(); }
   }, 50);
 }
+
+// Navegação inteligente: escolhe automaticamente o filtro certo de acordo com a
+// situação real do cliente (já vencido / vence hoje / vence em até 3 dias / até 7 dias)
+// e, em seguida, rola a tela até o card dele com um destaque visual temporário.
+function irParaClienteVencimento(clienteId, diasVenc){
+  showPage('vencimentos');
+  setTimeout(()=>{
+    const sel = document.getElementById('filter-venc-periodo');
+    if(sel){
+      let valorFiltro;
+      if(diasVenc < 0)            valorFiltro = '0';     // Já vencidos
+      else if(diasVenc === 0)     valorFiltro = 'hoje';   // Vence hoje
+      else if(diasVenc <= 3)      valorFiltro = 'venc3';  // Próximos 3 dias
+      else                        valorFiltro = '7';      // Próximos 7 dias
+      sel.value = valorFiltro;
+      renderVencimentos();
+    }
+    setTimeout(()=>destacarCardCliente(clienteId), 60);
+  }, 50);
+}
+
+// Rola até o card do cliente (na lista atualmente renderizada) e aplica um
+// destaque visual piscante para chamar atenção, removendo-o depois.
+function destacarCardCliente(clienteId){
+  const el = document.getElementById('venc-card-'+clienteId);
+  if(!el) return;
+  el.scrollIntoView({ behavior:'smooth', block:'center' });
+  el.classList.add('card-destaque');
+  setTimeout(()=>el.classList.remove('card-destaque'), 2200);
+}
 function irParaAniversariantes(){
   showPage('clientes');
   setTimeout(()=>{
@@ -3381,7 +3421,7 @@ function renderVencimentos(){
   el.innerHTML = list.map(c=>{
     const dias = diasAteVencer(c.vencimento);
     const badge = dias<0?`<span class="badge badge-red">${Math.abs(dias)}d vencido</span>`:dias===0?'<span class="badge badge-red">HOJE</span>':dias===1?'<span class="badge badge-yellow">AMANHÃ</span>':`<span class="badge badge-blue">${dias} dias</span>`;
-    return `<div class="client-card">
+    return `<div class="client-card" id="venc-card-${c.id}">
       <div class="client-card-header">
         <span class="client-card-name" style="cursor:pointer;color:var(--accent2)" onclick="editCliente('${c.id}')" title="Editar cliente">${iconeCliente(c.desde)} ${c.nome}</span>
         ${badge}
