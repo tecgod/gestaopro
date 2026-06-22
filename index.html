@@ -967,6 +967,7 @@ tbody td:first-child{color:var(--text);font-weight:500}
       <div class="search-bar">
         <select id="filter-venc-periodo" class="field" style="width:auto;padding:10px 12px" onchange="renderVencimentos()">
           <option value="hoje">Vence Hoje</option>
+          <option value="venc3">Hoje + Próx. 3 dias</option>
           <option value="7">Próximos 7 dias</option>
           <option value="15">Próximos 15 dias</option>
           <option value="30">Próximos 30 dias</option>
@@ -2011,13 +2012,13 @@ function verificarNotificacoes(){
 
   const body = document.getElementById('notif-body');
   body.innerHTML = avisos.map(a => `
-    <div style="background:var(--bg3);border:1px solid var(--border);border-left:3px solid ${a.cor};border-radius:var(--radius);padding:12px 14px">
+    <div style="background:var(--bg3);border:1px solid var(--border);border-left:3px solid ${a.cor};border-radius:var(--radius);padding:12px 14px${a.tipo==='vencimento'?';cursor:pointer':''};" ${a.tipo==='vencimento'?'onclick="closeModal(\'modal-notificacoes\');irParaVencidosHojeE3Dias()" title="Clique para ver clientes vencidos e próximos (hoje + 3 dias)"':''}>
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
         <div>
-          <div style="font-size:12px;font-weight:600;color:${a.cor};text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">${a.icon} ${a.titulo}</div>
+          <div style="font-size:12px;font-weight:600;color:${a.cor};text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">${a.icon} ${a.titulo}${a.tipo==='vencimento'?' <span style="font-size:10px;opacity:.7;font-weight:400;text-transform:none">— clique para ver lista</span>':''}</div>
           <div style="font-size:13px;color:var(--text2)">${a.msg}</div>
         </div>
-        ${a.whatsapp ? `<button class="btn btn-whatsapp btn-sm btn-icon" title="Avisar pelo WhatsApp" onclick="abrirWhatsappNotif('${a.whatsapp}','${a.tipo}')">📲</button>` : ''}
+        ${a.whatsapp ? `<button class="btn btn-whatsapp btn-sm btn-icon" title="Avisar pelo WhatsApp" onclick="event.stopPropagation();abrirWhatsappNotif('${a.whatsapp}','${a.tipo}')">📲</button>` : ''}
       </div>
     </div>
   `).join('');
@@ -2678,6 +2679,13 @@ function irParaVencidos(){
     if(sel){ sel.value='0'; renderVencimentos(); }
   }, 50);
 }
+function irParaVencidosHojeE3Dias(){
+  showPage('vencimentos');
+  setTimeout(()=>{
+    const sel = document.getElementById('filter-venc-periodo');
+    if(sel){ sel.value='venc3'; renderVencimentos(); }
+  }, 50);
+}
 function irParaVencimentos7(){
   showPage('vencimentos');
   setTimeout(()=>{
@@ -3311,6 +3319,9 @@ function renderVencimentos(){
   let list;
   if(periodoVal === 'hoje'){
     list = DB.clientes.filter(c=>diasAteVencer(c.vencimento)===0);
+  } else if(periodoVal === 'venc3'){
+    list = DB.clientes.filter(c=>{ const d=diasAteVencer(c.vencimento); return d>=0&&d<=3; })
+      .sort((a,b)=>diasAteVencer(a.vencimento)-diasAteVencer(b.vencimento));
   } else if(periodo===0){
     list = DB.clientes.filter(c=>diasAteVencer(c.vencimento)<0).sort((a,b)=>diasAteVencer(a.vencimento)-diasAteVencer(b.vencimento));
   } else if(periodo===100 || isNaN(periodo)){
