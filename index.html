@@ -2445,7 +2445,9 @@ function init(){
   if('Notification' in window && Notification.permission === 'default'){
     setTimeout(()=> Notification.requestPermission(), 1500);
   }
-  setTimeout(verificarNotificacoes, 600);
+  // Se não há GAS configurado, verifica notificações com dados locais após breve delay
+  // (quando há GAS, verificarNotificacoes é chamada ao final do syncData, com dados completos)
+  if(!GAS_URL){ setTimeout(verificarNotificacoes, 600); }
   // Recheck a cada 1 hora (silencioso — só push, sem popup repetido)
   setInterval(verificarNotificacoesSilencioso, 60 * 60 * 1000);
 }
@@ -2549,6 +2551,7 @@ async function syncData(){
     if(txt) txt.textContent='Sincronizado';
     toast('✅ Dados sincronizados com Google Sheets','success');
     renderDashboard();
+    verificarNotificacoes();
   }catch(e){
     if(dot){ dot.className='sync-dot'; dot.style.background='var(--red)'; }
     if(txt) txt.textContent='Erro sync';
